@@ -41,7 +41,7 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/spf13/cast v1.9.2
 	github.com/stretchr/testify v1.11.1
-	github.com/tidwall/buntdb v1.2.10
+	github.com/tidwall/buntdb v1.3.2
 	github.com/tidwall/gjson v1.18.0
 	go.uber.org/atomic v1.11.0
 	golang.org/x/sync v0.16.0
@@ -83,7 +83,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
