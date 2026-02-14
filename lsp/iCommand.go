@@ -246,7 +246,7 @@ func IWatch(c *MessageContext, groupCode int64, id string, site string, watchTyp
 		userInfo, _ := cm.Get(mid)
 		if _, err := cm.Remove(c, groupCode, mid, watchType); err != nil {
 			if err == buntdb.ErrNotFound {
-				c.TextReply(fmt.Sprintf("unwatch失败 - 未找到该用户"))
+				c.TextReply("unwatch失败 - 未找到该用户")
 			} else {
 				log.Errorf("site %v remove failed %v", site, err)
 				c.TextReply(fmt.Sprintf("unwatch失败 - %v", err))
@@ -265,7 +265,7 @@ func IWatch(c *MessageContext, groupCode int64, id string, site string, watchTyp
 	if err != nil {
 		if err == concern.ErrAlreadyExists {
 			log.Errorf("user already watched")
-			c.TextReply(fmt.Sprintf("watch失败 - 已经watch过了"))
+			c.TextReply("watch失败 - 已经watch过了")
 		} else {
 			log.Errorf("watch error %v", err)
 			c.TextReply(fmt.Sprintf("watch失败 - %v", err))
@@ -323,7 +323,7 @@ func IEnable(c *MessageContext, groupCode int64, command string, disable bool) {
 				c.TextReply("失败 - 该命令已经启用过了，请不要重复启用")
 			}
 		} else {
-			c.TextReply(fmt.Sprintf("失败 - 内部错误"))
+			c.TextReply("失败 - 内部错误")
 		}
 		return
 	}
@@ -369,11 +369,12 @@ func IGrantRole(c *MessageContext, groupCode int64, grantRole permission.RoleTyp
 	}
 	if err != nil {
 		log.Errorf("grant failed %v", err)
-		if err == permission.ErrPermissionExist {
+		switch err {
+		case permission.ErrPermissionExist:
 			c.TextReply("失败 - 目标已有该权限")
-		} else if err == permission.ErrPermissionNotExist {
+		case permission.ErrPermissionNotExist:
 			c.TextReply("失败 - 目标未有该权限")
-		} else {
+		default:
 			c.TextReply(fmt.Sprintf("失败 - %v", err))
 		}
 		return
@@ -418,11 +419,12 @@ func IGrantCmd(c *MessageContext, groupCode int64, command string, grantTo int64
 			c.GlobalDisabledReply()
 			return
 		}
-		if err == permission.ErrPermissionExist {
+		switch err {
+		case permission.ErrPermissionExist:
 			c.TextReply("失败 - 目标已有该权限")
-		} else if err == permission.ErrPermissionNotExist {
+		case permission.ErrPermissionNotExist:
 			c.TextReply("失败 - 目标未有该权限")
-		} else {
+		default:
 			c.TextReply(fmt.Sprintf("失败 - %v", err))
 		}
 		return

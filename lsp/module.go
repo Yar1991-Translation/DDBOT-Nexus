@@ -23,6 +23,7 @@ import (
 	"github.com/cnxysoft/DDBOT-WSa/lsp/cfg"
 	"github.com/cnxysoft/DDBOT-WSa/lsp/concern"
 	"github.com/cnxysoft/DDBOT-WSa/lsp/concern_type"
+	"github.com/cnxysoft/DDBOT-WSa/lsp/groupux"
 	"github.com/cnxysoft/DDBOT-WSa/lsp/mmsg"
 	"github.com/cnxysoft/DDBOT-WSa/lsp/permission"
 	"github.com/cnxysoft/DDBOT-WSa/lsp/template"
@@ -53,8 +54,6 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var Debug = false
 
-var online = false
-
 type Lsp struct {
 	pool          image_pool.Pool
 	concernNotify <-chan concern.Notify
@@ -67,6 +66,7 @@ type Lsp struct {
 
 	PermissionStateManager *permission.StateManager
 	LspStateManager        *StateManager
+	GroupUXManager         *groupux.Manager
 	started                atomic.Bool
 }
 
@@ -222,9 +222,18 @@ func (l *Lsp) Init() {
 		log.Infof("已启用模板")
 		template.InitTemplateLoader()
 	}
+	policy := cfg.GetGroupUXPolicy()
+	if l.GroupUXManager == nil {
+		l.GroupUXManager = groupux.NewManager(policy)
+	} else {
+		l.GroupUXManager.SetGlobalPolicy(policy)
+	}
 	cfg.ReloadCustomCommandPrefix()
 	config.GlobalConfig.OnConfigChange(func(in fsnotify.Event) {
 		go cfg.ReloadCustomCommandPrefix()
+		if l.GroupUXManager != nil {
+			l.GroupUXManager.SetGlobalPolicy(cfg.GetGroupUXPolicy())
+		}
 		l.CronjobReload()
 	})
 }
@@ -1042,6 +1051,7 @@ var Instance = &Lsp{
 	msgLimit:               semaphore.NewWeighted(3),
 	PermissionStateManager: permission.NewStateManager(),
 	LspStateManager:        NewStateManager(),
+	GroupUXManager:         groupux.NewManager(cfg.GetGroupUXPolicy()),
 	cron:                   cron.New(cron.WithLogger(cron.VerbosePrintfLogger(cronLog))),
 }
 

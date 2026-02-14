@@ -72,26 +72,43 @@ func Run() {
 		}
 	}
 
+	legacyExists := false
 	if fi, err := os.Stat("application.yaml"); err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println("警告：没有检测到配置文件application.yaml，正在生成，如果是第一次运行，可忽略")
-			if err := ioutil.WriteFile("application.yaml", []byte(exampleConfig), 0755); err != nil {
-				warn.Warn(fmt.Sprintf("application.yaml生成失败 - %v", err))
-				os.Exit(1)
-			} else {
-				fmt.Println("最小配置application.yaml已生成，请按需修改，如需高级配置请查看帮助文档")
-			}
-		} else {
-			warn.Warn(fmt.Sprintf("检查application.yaml文件失败 - %v", err))
+		if !os.IsNotExist(err) {
+			warn.Warn(fmt.Sprintf("failed to check application.yaml: %v", err))
 			os.Exit(1)
 		}
 	} else {
 		if fi.IsDir() {
-			warn.Warn("检测到application.yaml，但目标是一个文件夹！请手动确认并删除该文件夹！")
+			warn.Warn("application.yaml exists but is a directory")
 			os.Exit(1)
-		} else {
-			fmt.Println("检测到application.yaml，使用存在的application.yaml")
 		}
+		legacyExists = true
+		fmt.Println("application.yaml found")
+	}
+
+	v2Exists := false
+	if fi, err := os.Stat("application.v2.yaml"); err != nil {
+		if !os.IsNotExist(err) {
+			warn.Warn(fmt.Sprintf("failed to check application.v2.yaml: %v", err))
+			os.Exit(1)
+		}
+	} else {
+		if fi.IsDir() {
+			warn.Warn("application.v2.yaml exists but is a directory")
+			os.Exit(1)
+		}
+		v2Exists = true
+		fmt.Println("application.v2.yaml found")
+	}
+
+	if !legacyExists && !v2Exists {
+		fmt.Println("No config file found, generating legacy application.yaml")
+		if err := ioutil.WriteFile("application.yaml", []byte(exampleConfig), 0o755); err != nil {
+			warn.Warn(fmt.Sprintf("failed to create application.yaml: %v", err))
+			os.Exit(1)
+		}
+		fmt.Println("application.yaml generated")
 	}
 
 	config.GlobalConfig.SetConfigName("application")

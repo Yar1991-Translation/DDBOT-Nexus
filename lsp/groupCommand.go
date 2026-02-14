@@ -37,6 +37,7 @@ func NewLspGroupCommand(l *Lsp, msg *message.GroupMessage) *LspGroupCommand {
 		Runtime: NewRuntime(l, l.PermissionStateManager.CheckGroupSilence(msg.GroupCode)),
 		msg:     msg,
 	}
+	c.UseGroupContext(msg.GroupCode, msg.Sender.Uin)
 	c.Parse(msg.Elements)
 	return c
 }
@@ -183,7 +184,6 @@ func (lgc *LspGroupCommand) Execute() {
 			log.Debug("no command matched")
 		}
 	}
-	return
 }
 
 func (lgc *LspGroupCommand) LspCommand() {
@@ -371,8 +371,6 @@ func (lgc *LspGroupCommand) SetuCommand(r18 bool) {
 	if searchNum != num || missCount.Load() != 0 {
 		lgc.textReplyF("本次共查询到%v张图片，有%v张图片被吞了哦", searchNum, missCount.Load())
 	}
-
-	return
 }
 
 func (lgc *LspGroupCommand) WatchCommand(remove bool) {
@@ -679,6 +677,9 @@ func (lgc *LspGroupCommand) ConfigCommand() {
 	log := lgc.DefaultLoggerWithCommand(lgc.CommandName())
 	log.Infof("run %v command", lgc.CommandName())
 	defer func() { log.Infof("%v command end", lgc.CommandName()) }()
+	if lgc.handleConfigChatCommand(log) {
+		return
+	}
 
 	var configCmd struct {
 		At struct {
@@ -931,24 +932,6 @@ func (lgc *LspGroupCommand) groupName() string {
 	return lgc.msg.GroupName
 }
 
-func (lgc *LspGroupCommand) requireAnyCommand(commands ...string) bool {
-	var ok = lgc.l.PermissionStateManager.RequireAny(
-		permission.AdminRoleRequireOption(lgc.uin()),
-		permission.GroupAdminRoleRequireOption(lgc.groupCode(), lgc.uin()),
-		permission.QQAdminRequireOption(lgc.groupCode(), lgc.uin()),
-	)
-	if ok {
-		return true
-	}
-	for _, command := range commands {
-		ok = ok || lgc.l.PermissionStateManager.RequireAny(permission.GroupCommandRequireOption(lgc.groupCode(), lgc.uin(), command))
-		if ok {
-			return true
-		}
-	}
-	return false
-}
-
 func (lgc *LspGroupCommand) requireEnable(command string) bool {
 	if !lgc.groupEnabled(command) {
 		lgc.DefaultLoggerWithCommand(command).Debug("not enable")
@@ -985,10 +968,6 @@ func (lgc *LspGroupCommand) textReplyF(format string, args ...interface{}) *mess
 
 func (lgc *LspGroupCommand) textSend(text string) *message.GroupMessage {
 	return lgc.send(mmsg.NewText(text))
-}
-
-func (lgc *LspGroupCommand) textSendF(format string, args ...interface{}) *message.GroupMessage {
-	return lgc.send(mmsg.NewTextf(format, args...))
 }
 
 func (lgc *LspGroupCommand) reply(msg *mmsg.MSG) *message.GroupMessage {

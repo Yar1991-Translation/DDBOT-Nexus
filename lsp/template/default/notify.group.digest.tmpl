@@ -1,0 +1,11 @@
+[{{ .title }}]
+总计：{{ .count }} 条
+{{- if gt (len .items) 0 }}
+{{- range .items }}
+{{ .Index }}. [{{ .Time }}] {{ .Site }}/{{ .Type }} {{ if .UID }}({{ .UID }}) {{ end }}{{ .Preview }}
+{{- end }}
+{{- end }}
+{{- if gt .remain 0 }}
+其余 {{ .remain }} 条已省略
+{{- end }}
+生成时间：{{ .generated_at }}

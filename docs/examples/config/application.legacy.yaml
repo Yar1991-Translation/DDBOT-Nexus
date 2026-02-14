@@ -1,0 +1,9 @@
+﻿bot:
+  commandPrefix: "/"
+websocket:
+  mode: ws-server
+  token: "legacy-token"
+dispatch:
+  largeNotifyLimit: 50
+notify:
+  parallel: 1

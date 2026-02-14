@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -19,6 +20,7 @@ import (
 	_ "github.com/cnxysoft/DDBOT-WSa/lsp/douyu"
 	_ "github.com/cnxysoft/DDBOT-WSa/lsp/huya"
 	"github.com/cnxysoft/DDBOT-WSa/lsp/permission"
+	_ "github.com/cnxysoft/DDBOT-WSa/lsp/roblox"
 	_ "github.com/cnxysoft/DDBOT-WSa/lsp/twitter"
 	_ "github.com/cnxysoft/DDBOT-WSa/lsp/weibo"
 	_ "github.com/cnxysoft/DDBOT-WSa/lsp/youtube"
@@ -27,12 +29,27 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "migrate-config" {
+		fs := flag.NewFlagSet("migrate-config", flag.ExitOnError)
+		in := fs.String("in", "application.yaml", "legacy config input path")
+		out := fs.String("out", "application.v2.yaml", "v2 config output path")
+		_ = fs.Parse(os.Args[2:])
+
+		report, err := config.MigrateConfigFile(*in, *out)
+		if err != nil {
+			fmt.Printf("migrate-config failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(config.FormatMigrationReport(report))
+		return
+	}
+
 	var cli struct {
-		Play         bool  `optional:"" help:"运行play函数，适用于测试和开发"`
-		Debug        bool  `optional:"" help:"启动debug模式"`
-		SetAdmin     int64 `optional:"" xor:"c" help:"设置admin权限"`
-		Version      bool  `optional:"" xor:"c" short:"v" help:"打印版本信息"`
-		SyncBilibili bool  `optional:"" xor:"c" help:"同步b站帐号的关注，适用于更换或迁移b站帐号的时候"`
+		Play         bool  `optional:"" help:"run play() for development"`
+		Debug        bool  `optional:"" help:"enable debug mode"`
+		SetAdmin     int64 `optional:"" xor:"c" help:"grant admin role to a QQ number"`
+		Version      bool  `optional:"" xor:"c" short:"v" help:"print version information"`
+		SyncBilibili bool  `optional:"" xor:"c" help:"sync bilibili follows for configured account"`
 	}
 	kong.Parse(&cli)
 
@@ -45,9 +62,9 @@ func main() {
 
 	if err := localdb.InitBuntDB(""); err != nil {
 		if err == localdb.ErrLockNotHold {
-			warn.Warn("tryLock数据库失败：您可能重复启动了这个BOT！\n如果您确认没有重复启动，请删除.lsp.db.lock文件并重新运行。")
+			warn.Warn("failed to lock lsp.db: another bot process may already be running")
 		} else {
-			warn.Warn("无法正常初始化数据库！请检查.lsp.db文件权限是否正确，如无问题则为数据库文件损坏，请阅读文档获得帮助。")
+			warn.Warn("unable to initialize database lsp.db")
 		}
 		return
 	}
@@ -57,7 +74,7 @@ func main() {
 			localdb.Close()
 		}); err != nil {
 			localdb.Close()
-			warn.Warn("无法正常初始化Windows环境！")
+			warn.Warn("unable to initialize Windows exit hook")
 			return
 		}
 	} else {
@@ -68,7 +85,7 @@ func main() {
 		sm := permission.NewStateManager()
 		err := sm.GrantRole(cli.SetAdmin, permission.Admin)
 		if err != nil {
-			fmt.Printf("设置Admin权限失败 %v\n", err)
+			fmt.Printf("grant admin failed: %v\n", err)
 		}
 		return
 	}
@@ -82,14 +99,13 @@ func main() {
 		return
 	}
 
-	fmt.Println("DDBOT交流群：755612788（已满）、980848391")
-	fmt.Println("二次修改:https://github.com/Hoshinonyaruko/DDBOT-ws")
-	fmt.Println("三次修改:https://github.com/cnxysoft/DDBOT-WSa")
-	fmt.Println("本分支版本主要以修复功能并接入OneBot协议的BOT框架为目的")
-	fmt.Println("主流框架：LLOneBot、NapCat、Lagrange")
-	fmt.Println("LLOneBot:https://llonebot.github.io/")
-	fmt.Println("NapCat:https://napneko.github.io/")
-	fmt.Println("Lagrange:https://lagrangedev.github.io/Lagrange.Doc/")
+	fmt.Println("DDBOT Nexus community groups: 1077402983")
+	fmt.Println("Forks: https://github.com/Hoshinonyaruko/DDBOT-ws")
+	fmt.Println("This branch: https://github.com/Yar1991-Translation/DDBOT-Nexus")
+	fmt.Println("Supported frameworks: LLOneBot, NapCat, Lagrange")
+	fmt.Println("LLOneBot: https://llonebot.github.io/")
+	fmt.Println("NapCat: https://napneko.github.io/")
+	fmt.Println("Lagrange: https://lagrangedev.github.io/Lagrange.Doc/")
 
 	if cli.Debug {
 		lsp.Debug = true
@@ -102,6 +118,5 @@ func main() {
 	}
 
 	DDBOT.SetUpLog()
-
 	DDBOT.Run()
 }

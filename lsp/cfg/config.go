@@ -3,10 +3,9 @@ package cfg
 import (
 	"errors"
 	"github.com/Sora233/MiraiGo-Template/config"
-	"github.com/ghodss/yaml"
-	"github.com/spf13/cast"
+	"github.com/cnxysoft/DDBOT-WSa/lsp/concern_type"
+	"github.com/cnxysoft/DDBOT-WSa/lsp/groupux"
 	"go.uber.org/atomic"
-	"os"
 	"strings"
 	"time"
 )
@@ -47,30 +46,14 @@ var customCommandPrefixAtomic atomic.Value
 
 // ReloadCustomCommandPrefix TODO wtf
 func ReloadCustomCommandPrefix() {
-	var result map[string]string
-	defer func() {
-		customCommandPrefixAtomic.Store(result)
-	}()
-	data, err := os.ReadFile("application.yaml")
-	if err != nil {
-		return
+	result := config.GlobalConfig.GetStringMapString("customCommandPrefix")
+	if len(result) == 0 {
+		result = config.GlobalConfig.GetStringMapString("customcommandprefix")
 	}
-	var all = make(map[string]interface{})
-
-	err = yaml.Unmarshal(data, &all)
-	if err != nil {
-		return
+	if result == nil {
+		result = make(map[string]string)
 	}
-	var a interface{}
-	if val, ok := all["customCommandPrefix"]; ok && val != nil {
-		a = val
-	} else if val, ok := all["customcommandprefix"]; ok {
-		a = val
-	}
-	if a == nil {
-		return
-	}
-	result = cast.ToStringMapString(a)
+	customCommandPrefixAtomic.Store(result)
 }
 
 func GetCustomCommandPrefix() map[string]string {
@@ -149,4 +132,119 @@ func GetNotifyParallel() int {
 
 func GetBilibiliOnlyOnlineNotify() bool {
 	return config.GlobalConfig.GetBool("bilibili.onlyOnlineNotify")
+}
+
+func GetGroupUXPolicy() groupux.GroupUXPolicy {
+	policy := groupux.GroupUXPolicy{
+		Enabled: getBoolDefault("groupUX.enabled", true),
+		Command: groupux.GroupUXCommandPolicy{
+			ConciseReply:       getBoolDefault("groupUX.command.conciseReply", true),
+			ParseErrorCooldown: getDurationDefault("groupUX.command.parseErrorCooldown", 20*time.Second),
+			GroupUnknownTips:   getBoolDefault("groupUX.command.groupUnknownTips", false),
+		},
+		Notify: groupux.GroupUXNotifyPolicy{
+			DedupeTTL: getDurationDefault("groupUX.notify.dedupeTTL", 90*time.Second),
+			Aggregate: groupux.GroupUXAggregatePolicy{
+				Enabled:  getBoolDefault("groupUX.notify.aggregate.enabled", true),
+				Window:   getDurationDefault("groupUX.notify.aggregate.window", 45*time.Second),
+				MaxItems: getIntDefault("groupUX.notify.aggregate.maxItems", 5),
+				Types:    normalizeAggregateTypes(config.GlobalConfig.GetStringSlice("groupUX.notify.aggregate.types")),
+			},
+			AtAllCooldown: getDurationDefault("groupUX.notify.atAllCooldown", 30*time.Minute),
+			QuietHours: groupux.GroupUXQuietHoursPolicy{
+				Enabled:       getBoolDefault("groupUX.notify.quietHours.enabled", false),
+				Start:         getTimeWindowDefault("groupUX.notify.quietHours.start", "23:00"),
+				End:           getTimeWindowDefault("groupUX.notify.quietHours.end", "07:00"),
+				SummaryOnExit: getBoolDefault("groupUX.notify.quietHours.summaryOnExit", true),
+				SummaryMaxN:   getIntDefault("groupUX.notify.quietHours.summaryMaxItems", 8),
+			},
+		},
+	}
+
+	if policy.Command.ParseErrorCooldown < 0 {
+		policy.Command.ParseErrorCooldown = 0
+	}
+	if policy.Notify.DedupeTTL < 0 {
+		policy.Notify.DedupeTTL = 0
+	}
+	if policy.Notify.Aggregate.Window < 0 {
+		policy.Notify.Aggregate.Window = 0
+	}
+	if policy.Notify.Aggregate.MaxItems <= 0 {
+		policy.Notify.Aggregate.MaxItems = 5
+	}
+	if len(policy.Notify.Aggregate.Types) == 0 {
+		policy.Notify.Aggregate.Types = []concern_type.Type{concern_type.Type("news")}
+	}
+	if policy.Notify.AtAllCooldown < 0 {
+		policy.Notify.AtAllCooldown = 0
+	}
+	if policy.Notify.QuietHours.SummaryMaxN <= 0 {
+		policy.Notify.QuietHours.SummaryMaxN = 8
+	}
+	return policy
+}
+
+func normalizeAggregateTypes(raw []string) []concern_type.Type {
+	if len(raw) == 0 {
+		return []concern_type.Type{concern_type.Type("news")}
+	}
+	seen := make(map[string]struct{}, len(raw))
+	types := make([]concern_type.Type, 0, len(raw))
+	for _, item := range raw {
+		tp := strings.TrimSpace(item)
+		if tp == "" {
+			continue
+		}
+		tp = strings.ToLower(tp)
+		if _, ok := seen[tp]; ok {
+			continue
+		}
+		seen[tp] = struct{}{}
+		types = append(types, concern_type.Type(tp))
+	}
+	return types
+}
+
+func getBoolDefault(key string, fallback bool) bool {
+	if !config.GlobalConfig.IsSet(key) {
+		return fallback
+	}
+	return config.GlobalConfig.GetBool(key)
+}
+
+func getIntDefault(key string, fallback int) int {
+	if !config.GlobalConfig.IsSet(key) {
+		return fallback
+	}
+	return config.GlobalConfig.GetInt(key)
+}
+
+func getDurationDefault(key string, fallback time.Duration) time.Duration {
+	if !config.GlobalConfig.IsSet(key) {
+		return fallback
+	}
+	raw := strings.TrimSpace(config.GlobalConfig.GetString(key))
+	if raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err == nil {
+			return parsed
+		}
+	}
+	value := config.GlobalConfig.GetDuration(key)
+	if value == 0 {
+		return fallback
+	}
+	return value
+}
+
+func getTimeWindowDefault(key, fallback string) string {
+	raw := strings.TrimSpace(config.GlobalConfig.GetString(key))
+	if raw == "" {
+		raw = fallback
+	}
+	if _, err := time.Parse("15:04", raw); err != nil {
+		return fallback
+	}
+	return raw
 }

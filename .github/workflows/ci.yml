@@ -1,108 +1,123 @@
-name: "CI"
+name: CI
+
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.24.5"
+  APP_NAME: DDBOT-Nexus
 
 jobs:
-  # run unittest
-  test:
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
-    env:
-      RUNNER_TOOL_CACHE: /toolcache
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            **/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Compile all packages
+        run: go test ./... -run '^$' -count=1
+
+      - name: Go vet
+        run: go vet ./...
+
+  test:
+    name: Stable Tests
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            **/go.sum
+
+      - name: Run stable test suites
+        run: go test ./bot/config ./lsp/groupux ./lsp/roblox -count=1
+
+  build:
+    name: Build (${{ matrix.goos }}-${{ matrix.goarch }})
+    needs: verify
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        go: [ '1.23.4' ]
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup FFMPEG
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: '7.1'
-      - name: Setup Go environment
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go }}
-      - name: Run tests
-        run: |
-          go test -v -coverprofile=profile.cov ./...
-      - name: go vet
-        run: |
-          go vet ./...
-      - name: Generate HTML report
-        run: go tool cover -html=profile.cov -o coverage.html
-      - name: Upload as coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage.html
-#      - name: Send coverage
-#        uses: shogo82148/actions-goveralls@v1
-#        with:
-#          path-to-profile: profile.cov
-#          flag-name: Go-${{ matrix.go }}
-#          parallel: true
-
-  # build binary
-  build:
-    needs: test
-    name: Build binary CI
-    runs-on: ubuntu-latest
-    env:
-      RUNNER_TOOL_CACHE: /toolcache
-    strategy:
-      matrix:
-        go: [ '1.23.4' ]
-        goos: [ linux, windows, darwin ]
-        goarch: [ "386", amd64, arm, arm64 ]
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm, arm64]
         exclude:
           - goos: darwin
-            goarch: arm
-          - goos: darwin
             goarch: "386"
-      fail-fast: true
+          - goos: darwin
+            goarch: arm
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup FFMPEG
-        uses: AnimMouse/setup-ffmpeg@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          version: '7.1'
-      - name: Setup Go environment
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go }}
-          cache-dependency-path: "**/*.sum"
-      - name: Set env
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            **/go.sum
+
+      - name: Build binary
+        shell: bash
         run: |
-          echo BUILD_TIME=$(date --rfc-3339=seconds) >> ${GITHUB_ENV}
-      - name: Build binary file
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          export BINARY_NAME="DDBOT"
-          if [ $GOOS = "windows" ]; then export BINARY_NAME="$BINARY_NAME.exe"; fi
-          go build -o "$BINARY_NAME" -ldflags '-w -s -X "github.com/cnxysoft/DDBOT-WSa/lsp.BuildTime=${{ env.BUILD_TIME }}" -X github.com/cnxysoft/DDBOT-WSa/lsp.CommitId=${{ github.sha }} -X github.com/cnxysoft/DDBOT-WSa/lsp.Tags=${{ env.Tags }}' github.com/cnxysoft/DDBOT-WSa/cmd
+          set -euo pipefail
+          BUILD_TIME="$(date --iso-8601=seconds)"
+          TAGS="${GITHUB_REF_NAME:-dev}"
+          LSP_PKG="$(go list -f '{{.ImportPath}}' ./lsp)"
+          CMD_PKG="$(go list -f '{{.ImportPath}}' ./cmd)"
+          OUT_DIR="dist/${{ matrix.goos }}-${{ matrix.goarch }}"
+          mkdir -p "${OUT_DIR}"
+
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            EXT=".exe"
+          fi
+
+          OUT_BIN="${OUT_DIR}/${APP_NAME}${EXT}"
+          GOOS="${{ matrix.goos }}" GOARCH="${{ matrix.goarch }}" \
+            go build -trimpath \
+            -ldflags "-w -s -X ${LSP_PKG}.BuildTime=${BUILD_TIME} -X ${LSP_PKG}.CommitId=${GITHUB_SHA} -X ${LSP_PKG}.Tags=${TAGS}" \
+            -o "${OUT_BIN}" \
+            "${CMD_PKG}"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
-        if: ${{ !github.head_ref }}
         with:
           name: ${{ matrix.goos }}_${{ matrix.goarch }}
-          path: |
-            ./DDBOT
-            ./DDBOT.exe
-
-
-  # notifies that all test jobs are finished.
-  # finish:
-  #   needs: test
-  #   runs-on: ubuntu-latest
-  #   steps:
-#      - uses: shogo82148/actions-goveralls@v1
-#        with:
-#          parallel-finished: true
+          path: dist/${{ matrix.goos }}-${{ matrix.goarch }}/*

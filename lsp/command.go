@@ -85,17 +85,6 @@ var allGroupCommand = [...]string{
 	SilenceCommand, NoUpdateCommand, CleanConcern,
 }
 
-var allPrivateOperate = [...]string{
-	PingCommand, HelpCommand, LogCommand,
-	BlockCommand, SysinfoCommand, ListCommand,
-	WatchCommand, UnwatchCommand, DisableCommand,
-	EnableCommand, GrantCommand, ConfigCommand,
-	WhosyourdaddyCommand, QuitCommand, ModeCommand,
-	GroupRequestCommand, FriendRequestCommand, AdminCommand,
-	SilenceCommand, NoUpdateCommand, AbnormalConcernCheck,
-	CleanConcern,
-}
-
 var nonOprateable = [...]string{
 	EnableCommand, DisableCommand, GrantCommand,
 	BlockCommand, LogCommand, PingCommand,

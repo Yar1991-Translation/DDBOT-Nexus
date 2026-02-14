@@ -1,0 +1,7 @@
+﻿# legacy file used as fallback
+bot:
+  commandPrefix: "/"
+websocket:
+  mode: ws-server
+notify:
+  parallel: 1

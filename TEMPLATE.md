@@ -849,7 +849,7 @@ abort也支持图片参数
 这句话不会输出
 ```
 
-*以下为DDBOT-WSa新增*
+*以下为 DDBOT Nexus 新增*
 
 - 获取Unix时间戳 `{{ getUnixTime 1640995200 "2006-01-02 15:04:05" }}`
 
@@ -1200,7 +1200,7 @@ abort也支持图片参数
 以及开启下播推送：
 {{ prefix }}config offline_notify 97505 on
 BOT还支持更多功能，详细命令介绍请查看命令文档：
-https://github.com/cnxysoft/DDBOT-WSa/blob/master/EXAMPLE.md
+https://github.com/Yar1991-Translation/DDBOT-Nexus/blob/master/EXAMPLE.md
 使用时请把作者UID换成你需要的UID
 当您完成所有配置后，可以使用{{ prefix }}silence命令，让bot专注于推送，在群内发言更少
 {{- cut -}}

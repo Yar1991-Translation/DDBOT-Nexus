@@ -304,6 +304,9 @@ func (c *LspPrivateCommand) ConfigCommand() {
 	log := c.DefaultLoggerWithCommand(c.CommandName())
 	log.Infof("run %v command", c.CommandName())
 	defer func() { log.Infof("%v command end", c.CommandName()) }()
+	if c.handleConfigChatCommand(log) {
+		return
+	}
 
 	var configCmd struct {
 		At struct {
@@ -537,9 +540,10 @@ func (c *LspPrivateCommand) EnableCommand(disable bool) {
 		} else {
 			err = c.l.PermissionStateManager.GlobalEnableGroupCommand(command)
 		}
-		if err == nil {
+		switch err {
+		case nil:
 			c.textReply("成功")
-		} else if err == permission.ErrPermissionExist {
+		case permission.ErrPermissionExist:
 			if disable {
 				c.textReply("失败 - 该命令已禁用")
 			} else {
@@ -991,7 +995,7 @@ func (c *LspPrivateCommand) GroupRequestCommand() {
 			return
 		} else if err != nil {
 			log.Errorf("GetGroupInvitedRequest error %v", err)
-			c.textReply(fmt.Sprintf("失败 - 内部错误"))
+			c.textReply("失败 - 内部错误")
 			return
 		}
 		log := log.WithFields(logrus.Fields{
@@ -1115,7 +1119,7 @@ func (c *LspPrivateCommand) FriendRequestCommand() {
 			return
 		} else if err != nil {
 			log.Errorf("GetNewFriendRequest error %v", err)
-			c.textReply(fmt.Sprintf("失败 - 内部错误"))
+			c.textReply("失败 - 内部错误")
 			return
 		}
 
@@ -1350,10 +1354,6 @@ func (c *LspPrivateCommand) globalDisabledReply() *message.PrivateMessage {
 
 func (c *LspPrivateCommand) disabledReply() *message.PrivateMessage {
 	return c.textSend("该命令已被设置为disable，请设置enable后重试")
-}
-
-func (c *LspPrivateCommand) notImplReply() *message.PrivateMessage {
-	return c.textReply("暂未实现，你可以催作者GKD")
 }
 
 func (c *LspPrivateCommand) textSend(text string) *message.PrivateMessage {

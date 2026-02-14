@@ -1,0 +1,11 @@
+﻿bot:
+  commandPrefix: "#"
+transport:
+  websocket:
+    mode: ws-reverse
+    token: "v2-token"
+    wsReverse: "ws://127.0.0.1:3001"
+notify:
+  dispatch:
+    largeNotifyLimit: 80
+  parallel: 4

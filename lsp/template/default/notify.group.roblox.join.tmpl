@@ -1,0 +1,35 @@
+﻿{{- if and (eq .event_kind "enter") .thumbnail_url -}}
+{{ pic .thumbnail_url "[游戏缩略图]" }}
+{{- end }}
+{{- if eq .event_kind "leave" -}}
+[Roblox 离服]
+用户：{{ .display_name }} ({{ .username }} / {{ .user_id }})
+{{- if .game_name }}
+游戏：{{ .game_name }}
+{{- else if .last_location }}
+状态：{{ .last_location }}
+{{- end }}
+实例：{{ if .game_id }}{{ .game_id }}{{ else }}未知{{ end }}
+地点：{{ if gt .root_place_id 0 }}{{ .root_place_id }}{{ else }}{{ .place_id }}{{ end }}
+时间：{{ .occurred_at }}
+{{- else -}}
+[Roblox 入服]
+用户：{{ .display_name }} ({{ .username }} / {{ .user_id }})
+{{- if .game_name }}
+游戏：{{ .game_name }}
+{{- else if .last_location }}
+状态：{{ .last_location }}
+{{- end }}
+实例：{{ if .game_id }}{{ .game_id }}{{ else }}未知{{ end }}
+地点：{{ if gt .root_place_id 0 }}{{ .root_place_id }}{{ else }}{{ .place_id }}{{ end }}
+{{- if .prev_game_id }}
+上一实例：{{ .prev_game_id }}
+{{- end }}
+{{- if .join_url }}
+加入链接：{{ .join_url }}
+{{- end }}
+{{- if .link_source }}
+链接来源：{{ .link_source }}
+{{- end }}
+时间：{{ .occurred_at }}
+{{- end -}}

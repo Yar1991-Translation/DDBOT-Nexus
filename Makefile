@@ -1,7 +1,9 @@
 BUILD_TIME := $(shell date --rfc-3339=seconds)
 COMMIT_ID := $(shell git rev-parse HEAD)
+LSP_PKG := $(shell go list -f '{{.ImportPath}}' ./lsp)
+CMD_PKG := $(shell go list -f '{{.ImportPath}}' ./cmd)
 
-LDFLAGS = -X "github.com/cnxysoft/DDBOT-WSa/lsp.BuildTime='"$(BUILD_TIME)"'" -X "github.com/cnxysoft/DDBOT-WSa/lsp.CommitId='"$(COMMIT_ID)"'"
+LDFLAGS = -X "$(LSP_PKG).BuildTime='"$(BUILD_TIME)"'" -X "$(LSP_PKG).CommitId='"$(COMMIT_ID)"'"
 
 SRC := $(shell find . -type f -name '*.go') lsp/template/default/*
 PROTO := $(shell find . -type f -name '*.proto')
@@ -13,7 +15,7 @@ $(COV): $(SRC)
 
 
 $(TARGET): $(SRC) go.mod go.sum
-	go build -ldflags '$(LDFLAGS)' -o $(TARGET) github.com/cnxysoft/DDBOT-WSa/cmd
+	go build -ldflags '$(LDFLAGS)' -o $(TARGET) $(CMD_PKG)
 
 build: $(TARGET)
 

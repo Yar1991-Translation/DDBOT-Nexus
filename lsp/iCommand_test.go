@@ -72,15 +72,6 @@ func NewCtx(t *testing.T, receiver chan<- *mmsg.MSG, sender *message.Sender, tar
 	return ctx
 }
 
-func getCM(site string) concern.Concern {
-	for _, cm := range concern.ListConcern() {
-		if cm.Site() == site {
-			return cm
-		}
-	}
-	return nil
-}
-
 func testFresh(testEventChan <-chan concern.Event) concern.FreshFunc {
 	return func(ctx context.Context, eventChan chan<- concern.Event) {
 		for {

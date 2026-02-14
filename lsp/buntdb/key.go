@@ -217,6 +217,9 @@ func GlobalSilenceKey(keys ...interface{}) string {
 func GroupMuteKey(keys ...interface{}) string {
 	return NamedKey("GroupMute", keys)
 }
+func GroupUXConfigKey(keys ...interface{}) string {
+	return NamedKey("GroupUXConfig", keys)
+}
 func GroupInvitorKey(keys ...interface{}) string {
 	return NamedKey("GroupInventor", keys)
 }

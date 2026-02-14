@@ -120,6 +120,7 @@ func TestKeys(t *testing.T) {
 	GroupSilenceKey()
 	GlobalSilenceKey()
 	GroupMuteKey()
+	GroupUXConfigKey()
 	GroupInvitorKey()
 	LoliconPoolStoreKey()
 	ImageCacheKey()

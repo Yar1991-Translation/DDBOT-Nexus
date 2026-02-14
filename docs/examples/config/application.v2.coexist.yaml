@@ -1,0 +1,6 @@
+﻿# v2 file overrides conflicts from legacy file
+transport:
+  websocket:
+    mode: ws-reverse
+notify:
+  parallel: 3
