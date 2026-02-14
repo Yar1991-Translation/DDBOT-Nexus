@@ -64,7 +64,13 @@ jobs:
             **/go.sum
 
       - name: Run stable test suites
-        run: go test ./bot/config ./lsp/groupux ./lsp/roblox -count=1
+        run: go test ./lsp/groupux ./lsp/roblox -count=1
+
+      - name: Run bot config tests (submodule)
+        working-directory: bot
+        run: |
+          go mod edit -replace github.com/cnxysoft/DDBOT-WSa=..
+          go test ./config -count=1
 
   build:
     name: Build (${{ matrix.goos }}-${{ matrix.goarch }})
